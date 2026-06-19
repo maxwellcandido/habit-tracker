@@ -150,11 +150,17 @@ const DAYS_TO_SHOW = 14;
 function loadHabits() {
   try {
     return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 function saveHabits(habits) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(habits));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(habits));
+  } catch (err) {
+    console.warn('Não foi possível salvar os hábitos no armazenamento local:', err);
+  }
 }
 
 function todayStr() {
