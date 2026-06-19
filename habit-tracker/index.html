@@ -91,6 +91,18 @@
     gap: 6px;
     flex-wrap: wrap;
   }
+  .day-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .day-weekday {
+    font-size: 0.62rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
   .day {
     width: 32px;
     height: 32px;
@@ -112,7 +124,21 @@
     color: #0f1117;
     font-weight: 700;
   }
-  .day.today { box-shadow: 0 0 0 2px var(--accent2); }
+  .day.today {
+    border: 2px solid var(--accent2);
+  }
+  .day-today-label {
+    font-size: 0.62rem;
+    color: var(--accent2);
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .month-divider {
+    width: 1px;
+    align-self: stretch;
+    background: #2a2e3d;
+    margin: 0 2px;
+  }
 
   .empty {
     text-align: center;
@@ -213,7 +239,7 @@ function render() {
   }
 
   const today = todayStr();
-  const dayLabels = ['D','S','T','Q','Q','S','S'];
+  const weekdayLabels = ['D','S','T','Q','Q','S','S'];
 
   habits.forEach((habit, idx) => {
     const div = document.createElement('div');
@@ -252,13 +278,34 @@ function render() {
     const daysDiv = document.createElement('div');
     daysDiv.className = 'days';
 
+    let prevMonth = null;
     for (let i = DAYS_TO_SHOW - 1; i >= 0; i--) {
       const d = dateOffset(i);
       const dateObj = new Date(d + 'T00:00:00');
+      const isToday = d === today;
+
+      if (prevMonth !== null && dateObj.getMonth() !== prevMonth) {
+        const divider = document.createElement('div');
+        divider.className = 'month-divider';
+        daysDiv.appendChild(divider);
+      }
+      prevMonth = dateObj.getMonth();
+
+      const cell = document.createElement('div');
+      cell.className = 'day-cell';
+
+      const weekdayLabel = document.createElement('span');
+      weekdayLabel.className = 'day-weekday';
+      weekdayLabel.textContent = isToday ? '' : weekdayLabels[dateObj.getDay()];
+
+      const todayLabel = document.createElement('span');
+      todayLabel.className = 'day-today-label';
+      todayLabel.textContent = isToday ? 'Hoje' : '';
+
       const btn = document.createElement('button');
-      btn.className = 'day' + (habit.dates.includes(d) ? ' done' : '') + (d === today ? ' today' : '');
+      btn.className = 'day' + (habit.dates.includes(d) ? ' done' : '') + (isToday ? ' today' : '');
       btn.textContent = dateObj.getDate();
-      btn.title = dateObj.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' });
+      btn.title = dateObj.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
       btn.onclick = () => {
         const pos = habit.dates.indexOf(d);
         if (pos >= 0) habit.dates.splice(pos, 1);
@@ -266,7 +313,10 @@ function render() {
         saveHabits(habits);
         render();
       };
-      daysDiv.appendChild(btn);
+
+      cell.appendChild(isToday ? todayLabel : weekdayLabel);
+      cell.appendChild(btn);
+      daysDiv.appendChild(cell);
     }
 
     div.appendChild(top);
