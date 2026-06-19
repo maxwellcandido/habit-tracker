@@ -452,7 +452,7 @@ function render() {
   });
 
   const totalDone = habits.reduce((sum, h) => sum + (h.dates.includes(today) ? 1 : 0), 0);
-  stats.textContent = `${totalDone} de ${habits.length} hábito${habits.length > 1 ? 's' : ''} concluído${totalDone === 1 ? '' : 's'} hoje`;
+  stats.textContent = `${totalDone} de ${habits.length} hábito${habits.length > 1 ? 's' : ''} concluído${habits.length > 1 ? 's' : ''} hoje`;
 }
 
 document.getElementById('addForm').addEventListener('submit', (e) => {
