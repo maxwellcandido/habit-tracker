@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rastreador de Hábitos</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --card: #1a1d27;
+    --accent: #6ee7b7;
+    --accent2: #818cf8;
+    --text: #e5e7eb;
+    --muted: #8b8f9c;
+    --danger: #f87171;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: linear-gradient(160deg, #0f1117, #1a1d2e);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px;
+  }
+  .container { max-width: 700px; margin: 0 auto; }
+  h1 { font-size: 1.8rem; margin-bottom: 4px; }
+  .subtitle { color: var(--muted); margin-bottom: 24px; font-size: 0.95rem; }
+
+  .add-form {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+  .add-form input {
+    flex: 1;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid #2a2e3d;
+    background: var(--card);
+    color: var(--text);
+    font-size: 1rem;
+  }
+  .add-form input:focus { outline: 2px solid var(--accent2); }
+  .add-form button {
+    padding: 12px 18px;
+    border-radius: 10px;
+    border: none;
+    background: var(--accent2);
+    color: #0f1117;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 1rem;
+  }
+  .add-form button:hover { filter: brightness(1.1); }
+
+  .habit {
+    background: var(--card);
+    border-radius: 14px;
+    padding: 16px 18px;
+    margin-bottom: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+  }
+  .habit-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .habit-name { font-size: 1.1rem; font-weight: 600; }
+  .habit-streak {
+    font-size: 0.85rem;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .habit-actions { display: flex; gap: 8px; align-items: center; }
+  .icon-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 1.1rem;
+    padding: 4px;
+  }
+  .icon-btn:hover { color: var(--danger); }
+
+  .days {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .day {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #2a2e3d;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    color: var(--muted);
+    transition: transform 0.1s, background 0.2s;
+    position: relative;
+  }
+  .day:hover { transform: scale(1.1); }
+  .day.done {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #0f1117;
+    font-weight: 700;
+  }
+  .day.today { box-shadow: 0 0 0 2px var(--accent2); }
+
+  .empty {
+    text-align: center;
+    color: var(--muted);
+    padding: 40px 0;
+    font-size: 0.95rem;
+  }
+
+  .stats {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-top: 20px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🌱 Rastreador de Hábitos</h1>
+  <p class="subtitle">Marque os dias em que você cumpriu seu hábito. Tudo fica salvo no seu navegador.</p>
+
+  <form class="add-form" id="addForm">
+    <input type="text" id="habitInput" placeholder="Novo hábito (ex: Beber água, Ler 10 páginas...)" autocomplete="off" required />
+    <button type="submit">Adicionar</button>
+  </form>
+
+  <div id="habitList"></div>
+  <div class="stats" id="stats"></div>
+</div>
+
+<script>
+const STORAGE_KEY = 'habits-v1';
+const DAYS_TO_SHOW = 14;
+
+function loadHabits() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+  } catch { return []; }
+}
+
+function saveHabits(habits) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(habits));
+}
+
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function dateOffset(daysAgo) {
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  return d.toISOString().slice(0, 10);
+}
+
+function computeStreak(habit) {
+  let streak = 0;
+  let i = 0;
+  while (true) {
+    const d = dateOffset(i);
+    if (habit.dates.includes(d)) {
+      streak++;
+      i++;
+    } else if (i === 0) {
+      // today not done yet, still check streak from yesterday
+      i++;
+      continue;
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
+let habits = loadHabits();
+
+function render() {
+  const list = document.getElementById('habitList');
+  const stats = document.getElementById('stats');
+  list.innerHTML = '';
+
+  if (habits.length === 0) {
+    list.innerHTML = '<div class="empty">Nenhum hábito ainda. Adicione um acima para começar! 🚀</div>';
+    stats.textContent = '';
+    return;
+  }
+
+  const today = todayStr();
+  const dayLabels = ['D','S','T','Q','Q','S','S'];
+
+  habits.forEach((habit, idx) => {
+    const div = document.createElement('div');
+    div.className = 'habit';
+
+    const top = document.createElement('div');
+    top.className = 'habit-top';
+
+    const name = document.createElement('div');
+    name.className = 'habit-name';
+    name.textContent = habit.name;
+
+    const actions = document.createElement('div');
+    actions.className = 'habit-actions';
+
+    const streak = computeStreak(habit);
+    const streakSpan = document.createElement('span');
+    streakSpan.className = 'habit-streak';
+    streakSpan.textContent = streak > 0 ? `🔥 ${streak} dia${streak > 1 ? 's' : ''}` : '';
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'icon-btn';
+    delBtn.textContent = '✕';
+    delBtn.title = 'Remover hábito';
+    delBtn.onclick = () => {
+      habits.splice(idx, 1);
+      saveHabits(habits);
+      render();
+    };
+
+    actions.appendChild(streakSpan);
+    actions.appendChild(delBtn);
+    top.appendChild(name);
+    top.appendChild(actions);
+
+    const daysDiv = document.createElement('div');
+    daysDiv.className = 'days';
+
+    for (let i = DAYS_TO_SHOW - 1; i >= 0; i--) {
+      const d = dateOffset(i);
+      const dateObj = new Date(d + 'T00:00:00');
+      const btn = document.createElement('button');
+      btn.className = 'day' + (habit.dates.includes(d) ? ' done' : '') + (d === today ? ' today' : '');
+      btn.textContent = dateObj.getDate();
+      btn.title = dateObj.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' });
+      btn.onclick = () => {
+        const pos = habit.dates.indexOf(d);
+        if (pos >= 0) habit.dates.splice(pos, 1);
+        else habit.dates.push(d);
+        saveHabits(habits);
+        render();
+      };
+      daysDiv.appendChild(btn);
+    }
+
+    div.appendChild(top);
+    div.appendChild(daysDiv);
+    list.appendChild(div);
+  });
+
+  const totalDone = habits.reduce((sum, h) => sum + (h.dates.includes(today) ? 1 : 0), 0);
+  stats.textContent = `${totalDone} de ${habits.length} hábito${habits.length > 1 ? 's' : ''} concluído${totalDone === 1 ? '' : 's'} hoje`;
+}
+
+document.getElementById('addForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const input = document.getElementById('habitInput');
+  const name = input.value.trim();
+  if (!name) return;
+  habits.push({ name, dates: [] });
+  saveHabits(habits);
+  input.value = '';
+  render();
+});
+
+render();
+</script>
+</body>
+</html>
