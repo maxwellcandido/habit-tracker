@@ -157,14 +157,21 @@ function saveHabits(habits) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(habits));
 }
 
+function toLocalDateStr(d) {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function todayStr() {
-  return new Date().toISOString().slice(0, 10);
+  return toLocalDateStr(new Date());
 }
 
 function dateOffset(daysAgo) {
   const d = new Date();
   d.setDate(d.getDate() - daysAgo);
-  return d.toISOString().slice(0, 10);
+  return toLocalDateStr(d);
 }
 
 function computeStreak(habit) {
