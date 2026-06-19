@@ -267,6 +267,12 @@ function dateOffset(daysAgo) {
   return toLocalDateStr(d);
 }
 
+function dateFromToday(daysAhead) {
+  const d = new Date();
+  d.setDate(d.getDate() + daysAhead);
+  return toLocalDateStr(d);
+}
+
 function computeStreak(habit) {
   let streak = 0;
   let i = 0;
@@ -437,10 +443,10 @@ function render() {
       goalWrap.appendChild(goalInput);
       viewControls.appendChild(goalWrap);
 
-      for (let i = goalDays - 1; i >= 0; i--) {
-        const dateKey = dateOffset(i);
+      for (let i = 0; i < goalDays; i++) {
+        const dateKey = dateFromToday(i);
         const dateObj = new Date(dateKey + 'T00:00:00');
-        const sequenceNumber = goalDays - i;
+        const sequenceNumber = i + 1;
         daysDiv.appendChild(makeDayCell(dateObj, dateKey, dateKey === today, sequenceNumber));
       }
     }
